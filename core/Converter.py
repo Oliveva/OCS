@@ -7,8 +7,6 @@ from abc import ABC, abstractmethod
 class InputSource(ABC):
     """
     The abstract base class of the input source.
-
-    Subclasses must implement `get_sample_rate()` and `read_signal()`.
     """
 
     @property
@@ -88,6 +86,8 @@ class WavFileInput(InputSource):
 
     def __init__(self, file_path: str):
         self._sample_rate, self._signal = wavfile.read(file_path)
+        if self._signal.ndim == 2:
+            self._signal = self._signal[:, 0]
 
     @property
     def sample_rate(self) -> int:
@@ -102,12 +102,14 @@ class WavFileInput(InputSource):
         return np.arange(len(self._signal)) / self._sample_rate
 
 
+
+
 class ADC:
     """
     Analog-to-digital converter.
 
     Attributes:
-        _sample_rate (int):     The sampling rate of ADC.
+        sample_rate (int):     The sampling rate of ADC.
         _bits (int):            The number of digits quantized.
         _max_val (int):         The maximum value after quantization。
 
@@ -116,7 +118,7 @@ class ADC:
                                 frequency of input signal generally.
         bits (int):             The number of digits quantized, generally 8 or 16.
     """
-
+    sample_rate: int
     def __init__(self, sample_rate: int = 8000, bits: int = 16):
         self._sample_rate = sample_rate
         self._bits = bits
@@ -136,10 +138,10 @@ class ADC:
         sample_rate = signal_input.sample_rate
         signal_data = signal_input.signal
         duration = len(signal_data) / sample_rate
-        t = np.linspace(0, duration, int(self._sample_rate * duration), endpoint=False)
         if sample_rate != self._sample_rate:
             signal_data = self._resample_signal(signal_data, sample_rate)
         quantized = np.int16(signal_data * self._max_val)
+        t = np.linspace(0, duration, len(quantized), endpoint=False)
         return t, quantized
 
     def _resample_signal(self, src_signal: np.ndarray, src_rate: int):
@@ -204,7 +206,7 @@ class DAC:
         analog = digital_signal.astype(np.float32) / self._max_val
 
         if input_sample_rate != self._sample_rate:
-            analog = self.resample(analog, input_sample_rate)
+            analog = self._resample(analog, input_sample_rate)
 
         tap = firwin(
             numtaps=101,
@@ -216,7 +218,7 @@ class DAC:
 
         return t, analog_signal
 
-    def resample(self, src_signal: np.ndarray, src_rate: int) -> np.ndarray:
+    def _resample(self, src_signal: np.ndarray, src_rate: int) -> np.ndarray:
         gcd = np.gcd(src_rate, self._sample_rate)
         up = self._sample_rate // gcd
         down = src_rate // gcd
@@ -226,8 +228,8 @@ class DAC:
 if __name__ == "__main__":
     import matplotlib.pyplot as plt
 
-    ADConverter = ADC(sample_rate=16000)
-    signal = WavFileInput("../test/wav/output.wav")
+    ADConverter = ADC(sample_rate=90000)
+    signal = WavFileInput("C:/Users/Oliver/Downloads/sample-15s.wav")
     td, sig = ADConverter.convert(signal)
     print(type(sig))
 
