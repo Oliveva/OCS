@@ -102,16 +102,12 @@ class WavFileInput(InputSource):
         return np.arange(len(self._signal)) / self._sample_rate
 
 
-
-
 class ADC:
     """
     Analog-to-digital converter.
 
     Attributes:
         sample_rate (int):     The sampling rate of ADC.
-        _bits (int):            The number of digits quantized.
-        _max_val (int):         The maximum value after quantization。
 
     Args:
         sample_rate (int):      The sampling rate of ADC, should be bigger than twice of the
@@ -119,10 +115,11 @@ class ADC:
         bits (int):             The number of digits quantized, generally 8 or 16.
     """
     sample_rate: int
+
     def __init__(self, sample_rate: int = 8000, bits: int = 16):
-        self._sample_rate = sample_rate
+        self._sample_rate = int(sample_rate)
         self._bits = bits
-        self._max_val = 2 ** (bits - 1) - 1
+        self._max_val = 2 ** (bits - 1) - 1  # The maximum value after quantization.
 
     def convert(self, signal_input: InputSource):
         """
@@ -185,7 +182,7 @@ class DAC:
         analog_bandwidth (int):     Bandwidth of the analog signal (for designing anti-image filters)
     """
 
-    def __init__(self, sample_rate: int = 48000, bits: int = 16, analog_bandwidth: int = 20000):
+    def __init__(self, sample_rate: int = 48000, bits: int = 16, analog_bandwidth: int = 200):
         self._sample_rate = sample_rate
         self._bits = bits
         self._max_val = 2 ** (bits - 1) - 1
@@ -193,7 +190,7 @@ class DAC:
 
     def convert(self, digital_signal: np.ndarray, input_sample_rate: int):
         """
-        Convert the input digital signal to a analog signal.
+        Convert the input digital signal to an analog signal.
 
         Args:
             digital_signal (np.ndarray):     Input digital signal.
@@ -214,7 +211,7 @@ class DAC:
             fs=self._sample_rate
         )
         analog_signal = lfilter(tap, 1.0, analog)
-        t = np.arange(len(analog_signal))/self._sample_rate
+        t = np.arange(len(analog_signal)) / self._sample_rate
 
         return t, analog_signal
 
@@ -229,9 +226,8 @@ if __name__ == "__main__":
     import matplotlib.pyplot as plt
 
     ADConverter = ADC(sample_rate=90000)
-    signal = WavFileInput("C:/Users/Oliver/Downloads/sample-15s.wav")
+    signal = GeneratedSignalInput()
     td, sig = ADConverter.convert(signal)
-    print(type(sig))
 
     plt.subplot(211)
     plt.plot(signal.t, signal.signal)
