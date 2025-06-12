@@ -1,2 +1,8 @@
 .idea
+dist/
 test/
+build/
+__pycache__/
+*.ico
+*.spec
+*.drawio
